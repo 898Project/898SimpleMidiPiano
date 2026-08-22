@@ -16,9 +16,9 @@ jobs:
     - name: Instalacja Qt
       uses: jurplel/install-qt-action@v3
       with:
-        version: '6.6.1'  # Zmień na wersję Qt, której używasz lokalnie, np. 6.5.3 lub 6.6.1
+        version: '6.6.1'
         cached: 'true'
-        modules: 'qtmultimedia qtwebengine qtwebchannel'
+        modules: 'qtmultimedia qtwebengine qtwebchannel qtpositioning'
 
     - name: Konfiguracja CMake (Release)
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
