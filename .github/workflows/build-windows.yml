@@ -1,0 +1,44 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Pobranie kodu
+      uses: actions/checkout@v4
+
+    - name: Instalacja Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.6.1'  # Zmień na wersję Qt, której używasz lokalnie, np. 6.5.3 lub 6.6.1
+        cached: 'true'
+        modules: 'qtmultimedia qtwebengine'
+
+    - name: Konfiguracja CMake (Release)
+      run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+
+    - name: Kompilacja projektu
+      run: cmake --build build --config Release --parallel 4
+
+    - name: Deploy (windeployqt)
+      run: |
+        $windeployqt = Get-ChildItem -Path "$env:QT_PATH_VALUE" -Recurse -Filter "windeployqt.exe" | Select-Object -First 1
+        if ($windeployqt) {
+            Write-Host "Znaleziono: $($windeployqt.FullName)"
+            & $windeployqt.FullName --release --force build/Release/898SimpleMidiPiano.exe
+        } else {
+            Write-Error "Nie znaleziono windeployqt.exe!"
+            exit 1
+        }
+
+    - name: Archiwizacja i przygotowanie paczki
+      uses: actions/upload-artifact@v4
+      with:
+        name: 898SimpleMidiPiano-Windows-Portable
+        path: build/Release/

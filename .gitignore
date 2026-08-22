@@ -1,0 +1,10 @@
+# Pliki budowania i IDE
+build/
+build-*/
+.user
+CMakeCache.txt
+CMakeFiles/
+
+# Ciężka biblioteka Verovio (nie wrzucamy jej do Gita)
+verovio-develop/
+dist/

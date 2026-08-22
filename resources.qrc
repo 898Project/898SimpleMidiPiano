@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Leland.otf</file>
+        <file>soundfont.sf2</file>
+    </qresource>
+</RCC>
