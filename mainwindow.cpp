@@ -4,7 +4,7 @@
 #include <QFileDialog>
 #include <QDebug>
 #include <QMessageBox>
-#include <QRandomGenerator> // Wymagane do losowania nut w Trybie 1
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QFile>
 #include <QStandardPaths>
@@ -12,9 +12,11 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+#if !defined(_WIN32)
     , settings(nullptr)
     , synth(nullptr)
     , adriver(nullptr)
+#endif
     , soundFontId(-1)
     , isPlayingMidi(false)
     , currentBpm(120)
@@ -28,42 +30,30 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+#if !defined(_WIN32)
     // --- Inicjalizacja FluidSynth oraz SoundFonta z zasobów Qt ---
-    // --- Inicjalizacja FluidSynth i ładowanie SoundFonta ---
     settings = new_fluid_settings();
     fluid_settings_setint(settings, "synth.polyphony", 64);
     synth = new_fluid_synth(settings);
     adriver = new_fluid_audio_driver(settings, synth);
 
-    // 1. Używamy poprawnej ścieżki zasobu
     QString sourcePath = ":/soundfont.sf2";
-
-    // 2. Używamy systemowego katalogu tymczasowego (bezpieczniejsze niż sztywne "/tmp")
     QString tempPath = QDir::tempPath() + "/soundfont.sf2";
 
-    // 3. Sprawdzamy czy plik zasobu w ogóle istnieje w Qt
     if (!QFile::exists(sourcePath)) {
         qDebug() << "KRYTYCZNY BŁĄD: Nie mogę znaleźć pliku zasobu:" << sourcePath;
-        qDebug() << "Sprawdź plik .qrc, czy nazwa jest dokładnie taka sama!";
     } else {
-        // Usuwamy stary plik tymczasowy, jeśli istnieje
         if (QFile::exists(tempPath)) QFile::remove(tempPath);
-
-        // Kopiujemy
         if (QFile::copy(sourcePath, tempPath)) {
-            qDebug() << "Sukces: Skopiowano SoundFont do:" << tempPath;
-
-            // Ładujemy
             soundFontId = fluid_synth_sfload(synth, tempPath.toStdString().c_str(), 1);
             if (soundFontId == FLUID_FAILED) {
                 qDebug() << "BŁĄD: Nie udało się załadować SoundFontu do syntezatora!";
             } else {
                 qDebug() << "Sukces: SoundFont załadowany pomyślnie!";
             }
-        } else {
-            qDebug() << "BŁĄD: Kopiowanie pliku nie powiodło się!";
         }
     }
+#endif
 
     // --- Główny układ okna ---
     QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
@@ -79,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent)
     scoreLabel = new QLabel(this);
     scoreLabel->setStyleSheet("font-size: 20px; font-weight: bold; color: #2c3e50; padding: 4px;");
     scoreLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    resetScore(); // Ustawienie początkowego napisu "Poprawne: 0 | Błędne: 0 ..."
+    resetScore();
 
     topInfoLayout->addWidget(statusLabel);
     topInfoLayout->addWidget(scoreLabel);
@@ -118,7 +108,6 @@ MainWindow::MainWindow(QWidget *parent)
     // --- POŁĄCZENIA SYGNAŁÓW (UI) ---
     connect(btnOpen, &QPushButton::clicked, this, &MainWindow::otworzMidi);
 
-    // Zmiana trybu nauki
     connect(comboMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &MainWindow::onModeChanged);
 
@@ -128,9 +117,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     metronomeTimer = new QTimer(this);
     connect(metronomeTimer, &QTimer::timeout, this, [this]() {
+#if !defined(_WIN32)
         if (!metronomeActive || !synth) return;
         int noteToPlay = (currentBeatInMeasure == 0) ? 76 : 77;
         fluid_synth_noteon(synth, 9, noteToPlay, 100);
+#else
+        if (!metronomeActive) return;
+#endif
         currentBeatInMeasure = (currentBeatInMeasure + 1) % timeBeats;
     });
 
@@ -156,15 +149,13 @@ MainWindow::~MainWindow()
 {
     if (playbackTimer) playbackTimer->stop();
     if (metronomeTimer) metronomeTimer->stop();
+#if !defined(_WIN32)
     if (adriver) delete_fluid_audio_driver(adriver);
     if (synth) delete_fluid_synth(synth);
     if (settings) delete_fluid_settings(settings);
+#endif
     delete ui;
 }
-
-// -----------------------------------------------------------
-// LOGIKA GRY I ZMIANY TRYBÓW
-// -----------------------------------------------------------
 
 void MainWindow::onModeChanged(int index)
 {
@@ -179,41 +170,33 @@ void MainWindow::onModeChanged(int index)
         generateNextRandomTask();
     } else if (currentMode == PracticeMode::WaitMode) {
         statusLabel->setText("Wczytaj plik, aby rozpocząć grę (Czekanie).");
-        if(scoreWidget) scoreWidget->loadScoreData(""); // Czyszczenie widoku
+        if(scoreWidget) scoreWidget->loadScoreData("");
     } else if (currentMode == PracticeMode::PlayMode) {
         statusLabel->setText("Wczytaj plik i kliknij Play, aby odtworzyć.");
         if(scoreWidget) scoreWidget->loadScoreData("");
     }
 }
 
-// -----------------------------------------------------------
-// INTERAKCJA MIDI
-// -----------------------------------------------------------
-
 void MainWindow::handleNoteOn(int note, int velocity) {
-    // 1. Zawsze wydajemy dźwięk syntezatora
+#if !defined(_WIN32)
     if (synth) fluid_synth_noteon(synth, 0, note, velocity);
+#endif
 
-    // 2. Jeśli jesteśmy w trybie interaktywnym, analizujemy zagraną nutę
     if (currentMode == PracticeMode::WaitMode || currentMode == PracticeMode::RandomMode) {
         if (!currentlyPressedNotes.contains(note)) {
             currentlyPressedNotes.append(note);
         }
-        evaluateInput(); // Silnik sprawdza poprawność wejścia
+        evaluateInput();
     }
 }
 
 void MainWindow::handleNoteOff(int note) {
-    // Wyłączamy dźwięk
+#if !defined(_WIN32)
     if (synth) fluid_synth_noteoff(synth, 0, note);
+#endif
 
-    // Usuwamy nutę z listy "aktualnie trzymanych"
     currentlyPressedNotes.removeAll(note);
 }
-
-// -----------------------------------------------------------
-// SILNIK OCENIANIA (Sprawdzanie poprawności)
-// -----------------------------------------------------------
 
 void MainWindow::evaluateInput()
 {
@@ -251,10 +234,8 @@ void MainWindow::evaluateInput()
         if (currentMode == PracticeMode::RandomMode) {
             generateNextRandomTask();
         } else if (currentMode == PracticeMode::WaitMode) {
-
             currentlyPressedNotes.clear();
 
-            // Przeskakujemy kroki, w których nie trzeba wciskać nowych klawiszy (np. pauzy lub same łuki)
             do {
                 currentSequenceIndex++;
             } while (currentSequenceIndex < songSequence.size() &&
@@ -273,10 +254,6 @@ void MainWindow::evaluateInput()
         }
     }
 }
-
-// -----------------------------------------------------------
-// POMOCNICZE / UI
-// -----------------------------------------------------------
 
 void MainWindow::updateScoreDisplay()
 {
@@ -297,31 +274,23 @@ void MainWindow::resetScore()
     updateScoreDisplay();
 }
 
-// -----------------------------------------------------------
-// TRYB 1: GENEROWANIE LOSOWYCH NUT A VISTA
-// -----------------------------------------------------------
-
 void MainWindow::generateNextRandomTask()
 {
-    // Losujemy nutę z zakresu 60 (Środkowe C4) do 72 (C5)
     int randomMidiPitch = QRandomGenerator::global()->bounded(60, 73);
 
     expectedNotes.clear();
     expectedNotes.append(randomMidiPitch);
 
-    // Konwersja numeru MIDI na nutę w formacie MusicXML (uproszczona)
     const char* stepNames[] = {"C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"};
     QString step = stepNames[randomMidiPitch % 12];
     int octave = (randomMidiPitch / 12) - 1;
 
-    // Obsługa znaków krzyżyka (np. C#, D#, F#, G#, A#)
     bool isSharp = (randomMidiPitch % 12 == 1 || randomMidiPitch % 12 == 3 ||
                     randomMidiPitch % 12 == 6 || randomMidiPitch % 12 == 8 ||
                     randomMidiPitch % 12 == 10);
 
     QString alterTag = isSharp ? "<alter>1</alter>" : "";
 
-    // Budujemy minimalny plik MusicXML w postaci tekstu
     QString xmlData = QString(
                           "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                           "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">\n"
@@ -349,15 +318,10 @@ void MainWindow::generateNextRandomTask()
                           "</score-partwise>"
                           ).arg(step).arg(alterTag).arg(octave);
 
-    // Wyświetlamy nutę w Verovio
     if(scoreWidget) {
         scoreWidget->loadScoreData(xmlData);
     }
 }
-
-// -----------------------------------------------------------
-// OBSŁUGA PLIKÓW (TRYB 2 i 3)
-// -----------------------------------------------------------
 
 void MainWindow::otworzMidi() {
     QString filePath = QFileDialog::getOpenFileName(this, tr("Otwórz plik muzyczny"), "",
@@ -369,18 +333,12 @@ void MainWindow::otworzMidi() {
             QByteArray rawData = file.readAll();
             file.close();
 
-            // --- Czyszczenie narzuconych kierunków lasek (stem) ---
             QString xmlStr = QString::fromUtf8(rawData);
             xmlStr.remove(QRegularExpression("<stem>.*?</stem>"));
             QByteArray cleanedData = xmlStr.toUtf8();
 
-            // 1. Wyświetlamy nuty w Verovio (używając oczyszczonego XML)
             if (scoreWidget) scoreWidget->loadScoreData(cleanedData);
-
-            // 2. Tłumaczymy MusicXML na naszą maszynę stanów
             parseMusicXML(cleanedData);
-
-            // 3. Uruchamiamy wybrany tryb
             startCurrentMode();
 
         } else {
@@ -494,9 +452,11 @@ void MainWindow::autoPlayNextStep() {
     if (songSequence.isEmpty()) return;
 
     if (currentSequenceIndex >= songSequence.size()) {
+#if !defined(_WIN32)
         for (int note : activeAutoPlayNotes) {
             if (synth) fluid_synth_noteoff(synth, 0, note);
         }
+#endif
         activeAutoPlayNotes.clear();
         playbackTimer->stop();
         statusLabel->setText("Koniec odtwarzania.");
@@ -515,9 +475,11 @@ void MainWindow::autoPlayNextStep() {
         }
     }
 
+#if !defined(_WIN32)
     for (int note : notesToStop) {
         if (synth) fluid_synth_noteoff(synth, 0, note);
     }
+#endif
 
     QList<int> nextActiveNotes;
 
@@ -528,7 +490,9 @@ void MainWindow::autoPlayNextStep() {
     }
 
     for (int note : newExpectedNotes) {
+#if !defined(_WIN32)
         if (synth) fluid_synth_noteon(synth, 0, note, 100);
+#endif
         if (!nextActiveNotes.contains(note)) {
             nextActiveNotes.append(note);
         }
