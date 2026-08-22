@@ -1,0 +1,305 @@
+name: Python Wheel Build
+
+on:
+  push:
+    branches: [develop-pypi, master]
+    tags: ["v*", "version-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  packages: read
+
+env:
+  PACKAGE_NAME: verovio
+
+jobs:
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set TestPyPI development version
+        if: github.ref == 'refs/heads/develop-pypi'
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_ENV"
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path("include/vrv/vrvdef.h").read_text(encoding="utf-8")
+          values = dict(re.findall(r"#define (VERSION_(?:MAJOR|MINOR|REVISION)) ([0-9]+)", text))
+          version = f"{values['VERSION_MAJOR']}.{values['VERSION_MINOR']}.{values['VERSION_REVISION']}.dev{os.environ['GITHUB_RUN_NUMBER']}"
+          print(f"VEROVIO_BUILD_VERSION={version}")
+          PY
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+
+      - name: Build source distribution
+        run: python -m build --sdist
+
+      - name: Check source distribution
+        run: twine check dist/*.tar.gz
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  wheels:
+    name: Build wheels (${{ matrix.name }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runs-on: ubuntu-latest
+            archs: x86_64
+          - name: linux-aarch64
+            runs-on: ubuntu-24.04-arm
+            archs: aarch64
+          - name: macos-x86_64
+            runs-on: macos-15-intel
+            archs: x86_64
+          - name: macos-arm64
+            runs-on: macos-latest
+            archs: arm64
+          - name: windows
+            runs-on: windows-latest
+            archs: AMD64 x86
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set TestPyPI development version
+        if: github.ref == 'refs/heads/develop-pypi'
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_ENV"
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path("include/vrv/vrvdef.h").read_text(encoding="utf-8")
+          values = dict(re.findall(r"#define (VERSION_(?:MAJOR|MINOR|REVISION)) ([0-9]+)", text))
+          version = f"{values['VERSION_MAJOR']}.{values['VERSION_MINOR']}.{values['VERSION_REVISION']}.dev{os.environ['GITHUB_RUN_NUMBER']}"
+          print(f"VEROVIO_BUILD_VERSION={version}")
+          PY
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v4.1.1
+        with:
+          output-dir: wheelhouse
+        env:
+          CIBW_ARCHS: ${{ matrix.archs }}
+          CIBW_ENVIRONMENT_PASS_LINUX: VEROVIO_BUILD_VERSION
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.name }}
+          path: wheelhouse/*.whl
+
+  validate:
+    name: Validate distributions
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check distributions
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install twine
+          twine check artifacts/*
+
+      - name: Check abi3 wheel compatibility
+        run: |
+          python -m pip install abi3audit
+          python -m abi3audit --report artifacts/*.whl
+
+  validate_linux_abi3_runtime:
+    name: Validate Linux abi3 runtime (${{ matrix.python-version }})
+    needs: [wheels]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: wheels-linux-x86_64
+          path: wheelhouse
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Linux abi3 wheel and run smoke test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install wheelhouse/*.whl
+          python doc/python-smoke-test.py
+
+  validate_macos_arm64_abi3_runtime:
+    name: Validate macOS arm64 abi3 runtime (${{ matrix.python-version }})
+    needs: [wheels]
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: wheels-macos-arm64
+          path: wheelhouse
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install macOS arm64 abi3 wheel and run smoke test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install wheelhouse/*.whl
+          python doc/python-smoke-test.py
+
+  validate_windows_abi3_runtime:
+    name: Validate Windows amd64 abi3 runtime (${{ matrix.python-version }})
+    needs: [wheels]
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: wheels-windows
+          path: wheelhouse
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install Windows amd64 abi3 wheel
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          $wheels = @(Get-ChildItem wheelhouse -Filter *win_amd64.whl)
+          if ($wheels.Count -ne 1) {
+            throw "Expected exactly one win_amd64 wheel, found $($wheels.Count)"
+          }
+          python -m pip install $wheels[0].FullName
+
+      - name: Run smoke test
+        run: python doc/python-smoke-test.py
+
+  publish_testpypi:
+    name: Publish to TestPyPI
+    needs: [validate, validate_linux_abi3_runtime, validate_macos_arm64_abi3_runtime, validate_windows_abi3_runtime]
+    if: github.ref == 'refs/heads/develop-pypi'
+    runs-on: ubuntu-latest
+    environment: test-pypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish package distributions to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          skip-existing: true
+          attestations: false
+
+  publish_pypi:
+    name: Publish to PyPI
+    needs: [validate, validate_linux_abi3_runtime, validate_macos_arm64_abi3_runtime, validate_windows_abi3_runtime]
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/version-')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Verify release tag
+        shell: bash
+        run: |
+          git fetch origin master:refs/remotes/origin/master
+          git branch -r --contains "$GITHUB_SHA" | grep -q 'origin/master'
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          tag_version = re.sub(r"^(?:v|version-)", "", tag)
+          text = Path("include/vrv/vrvdef.h").read_text(encoding="utf-8")
+          values = dict(re.findall(r"#define (VERSION_(?:MAJOR|MINOR|REVISION|DEV)) ([A-Za-z0-9]+)", text))
+          header_version = f"{values['VERSION_MAJOR']}.{values['VERSION_MINOR']}.{values['VERSION_REVISION']}"
+          if tag_version != header_version:
+              raise SystemExit(f"Tag version {tag_version} does not match header version {header_version}")
+          if values["VERSION_DEV"] != "false":
+              raise SystemExit("VERSION_DEV must be false for PyPI releases")
+          PY
+
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

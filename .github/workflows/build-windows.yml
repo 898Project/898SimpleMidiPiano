@@ -20,6 +20,13 @@ jobs:
         cached: 'true'
         modules: 'qtmultimedia qtwebengine qtwebchannel qtpositioning'
 
+    - name: Kompilacja Verovio
+      run: |
+        pushd verovio-develop
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release --parallel 4
+        popd
+
     - name: Konfiguracja CMake (Release)
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
