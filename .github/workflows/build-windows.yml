@@ -18,7 +18,7 @@ jobs:
       with:
         version: '6.6.1'  # Zmień na wersję Qt, której używasz lokalnie, np. 6.5.3 lub 6.6.1
         cached: 'true'
-        modules: 'qtmultimedia qtwebengine'
+        modules: 'qtmultimedia qtwebengine qtwebchannel'
 
     - name: Konfiguracja CMake (Release)
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
