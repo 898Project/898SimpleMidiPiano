@@ -5,7 +5,8 @@ build-*/
 CMakeCache.txt
 CMakeFiles/
 
-# Ciężka biblioteka Verovio (nie wrzucamy jej do Gita)
-erovio-develop/build/
-verovio-develop/dist/
-dist/
+# Ignorujemy tylko główny folder dist projektu (z ukośnikiem na początku)
+/dist/
+
+# Ignorujemy tylko folder budowania Verovio, pozwalając śledzić kod i nagłówki
+verovio-develop/build/
