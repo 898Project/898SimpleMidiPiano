@@ -16,8 +16,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FLUIDSYNTH REQUIRED fluidsynth)
+# PkgConfig i FluidSynth są wymagane głównie na Linuksie/Unixie
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FLUIDSYNTH REQUIRED fluidsynth)
+else()
+    # Dla Windowsa ustawiamy puste zmienne, żeby CMake nie zgłaszał błędów
+    set(FLUIDSYNTH_LIBRARIES "")
+    set(FLUIDSYNTH_INCLUDE_DIRS "")
+    set(FLUIDSYNTH_CFLAGS_OTHER "")
+endif()
 
 set(PROJECT_SOURCES
     main.cpp
