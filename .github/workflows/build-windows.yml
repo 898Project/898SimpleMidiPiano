@@ -10,14 +10,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Pobranie kodu głównego projektu
+    - name: Pobranie kodu projektu
       uses: actions/checkout@v4
-
-    - name: Pobranie kodu Verovio
-      uses: actions/checkout@v4
-      with:
-        repository: rism-digital/verovio
-        path: verovio-develop
 
     - name: Instalacja Qt
       uses: jurplel/install-qt-action@v3
@@ -28,10 +22,10 @@ jobs:
 
     - name: Kompilacja Verovio
       run: |
-        pushd verovio-develop
+        cd verovio-develop
         cmake -B build -DCMAKE_BUILD_TYPE=Release
         cmake --build build --config Release --parallel 4
-        popd
+        cd ..
 
     - name: Konfiguracja CMake (Release)
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
