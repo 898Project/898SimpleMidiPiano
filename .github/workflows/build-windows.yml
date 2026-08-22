@@ -10,8 +10,14 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Pobranie kodu
+    - name: Pobranie kodu głównego projektu
       uses: actions/checkout@v4
+
+    - name: Pobranie kodu Verovio
+      uses: actions/checkout@v4
+      with:
+        repository: rism-digital/verovio
+        path: verovio-develop
 
     - name: Instalacja Qt
       uses: jurplel/install-qt-action@v3
