@@ -42,7 +42,7 @@ jobs:
     - name: Deploy (windeployqt)
       run: |
         $windeployqt = Get-ChildItem -Path "$env:QT_PATH_VALUE" -Recurse -Filter "windeployqt.exe" | Select-Object -First 1
-        if ($windeployqt) {
+        if ($wynn = $windeployqt) {
             Write-Host "Znaleziono: $($windeployqt.FullName)"
             & $windeployqt.FullName --release --force build/Release/898SimpleMidiPiano.exe
         } else {
