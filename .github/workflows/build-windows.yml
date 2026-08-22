@@ -14,15 +14,10 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Pobranie kodu Verovio
-      run: |
-        if (Test-Path verovio-develop) { 
-            Remove-Item -Recurse -Force verovio-develop 
-        }
-        git clone --depth 1 https://github.com/rism-digital/verovio.git verovio-develop
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Nie udało się pobrać biblioteki Verovio!"
-            exit $LASTEXITCODE
-        }
+      uses: actions/checkout@v4
+      with:
+        repository: rism-digital/verovio
+        path: verovio-develop
 
     - name: Instalacja Qt
       uses: jurplel/install-qt-action@v3
