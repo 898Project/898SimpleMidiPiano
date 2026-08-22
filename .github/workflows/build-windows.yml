@@ -13,19 +13,10 @@ jobs:
     - name: Pobranie kodu projektu
       uses: actions/checkout@v4
 
-    - name: Instalacja Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: '6.6.1'
-        cached: 'true'
-        modules: 'qtmultimedia qtwebengine qtwebchannel qtpositioning'
-
     - name: Kompilacja Verovio
       run: |
-        cd verovio-develop
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build --config Release --parallel 4
-        cd ..
+        cmake -S verovio-develop/cmake -B verovio-develop/build -DCMAKE_BUILD_TYPE=Release
+        cmake --build verovio-develop/build --config Release --parallel 4
 
     - name: Konfiguracja CMake (Release)
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
