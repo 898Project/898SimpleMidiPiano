@@ -7,7 +7,9 @@
 #include <QResizeEvent>
 #include <QList>
 #include <QTimer>
+#if !defined(_WIN32)
 #include <fluidsynth.h>
+#endif
 #include <QLabel>
 #include <QComboBox>
 #include <QMessageBox>
@@ -95,9 +97,14 @@ private:
     QTimer *playbackTimer;            // Timer do Trybu Odtwarzania (Play Mode)
 
     // --- Zmienne FluidSynth ---
+#if !defined(_WIN32)
+
+    // tutaj inne pola/metody powiązane z FluidSynth
+
     fluid_settings_t *settings;
     fluid_synth_t *synth;
     fluid_audio_driver_t *adriver;
+    #endif
     int soundFontId;
 
     bool isPlayingMidi;
