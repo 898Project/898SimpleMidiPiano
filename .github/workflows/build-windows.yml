@@ -18,7 +18,7 @@ jobs:
       with:
         version: '6.5.3'
         cached: 'true'
-        modules: 'qtwebengine qtmultimedia qtwebchannel'
+        modules: 'qtwebengine qtmultimedia qtwebchannel qtpositioning qtdeclarative'
 
     - name: Kompilacja Verovio
       run: |
