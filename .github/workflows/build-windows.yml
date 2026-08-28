@@ -13,10 +13,10 @@ jobs:
     - name: Pobranie kodu projektu
       uses: actions/checkout@v4
 
-    - name: Instalacja Qt 5
+    - name: Instalacja Qt 6
       uses: jurplel/install-qt-action@v3
       with:
-        version: '5.15.2'
+        version: '6.5.3'
         cached: 'true'
         modules: 'qtwebengine'
 
@@ -26,7 +26,7 @@ jobs:
         cmake --build verovio-develop/build --config Release --parallel 4
 
     - name: Konfiguracja CMake (Release)
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt5_DIR" -DCMAKE_CXX_FLAGS="/D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING"
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
 
     - name: Kompilacja projektu
       run: cmake --build build --config Release --parallel 4
