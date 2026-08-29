@@ -138,7 +138,7 @@ set_target_properties(898SimpleMidiPiano PROPERTIES
 )
 
 include(GNUInstallDirs)
-install(TARGETS 898MainMidiPiano # lub 898SimpleMidiPiano
+install(TARGETS 898SimpleMidiPiano
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
