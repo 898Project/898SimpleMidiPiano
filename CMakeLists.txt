@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(898SimpleMidiPiano VERSION 0.1 LANGUAGES CXX)
 
-# --- NOWOŚĆ: Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
+# --- Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 
@@ -27,6 +27,10 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
+# --- Integracja Verovio jako podprojektu CMake ---
+set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
+add_subdirectory(verovio-develop/cmake)
+
 set(PROJECT_SOURCES
     main.cpp
     mainwindow.cpp
@@ -41,7 +45,6 @@ set(PROJECT_SOURCES
     verovioscorewidget.cpp
 )
 
-# ... (tworzenie pliku wykonywalnego zostaje bez zmian) ...
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(898SimpleMidiPiano MANUAL_FINALIZATION ${PROJECT_SOURCES})
 else()
@@ -52,7 +55,7 @@ else()
     endif()
 endif()
 
-# --- NOWOŚĆ: Optymalizacje tylko dla Release ---
+# --- Optymalizacje tylko dla Release ---
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Konfiguracja optymalizacji dla Release...")
 
@@ -76,7 +79,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     endif()
 endif()
 
-# (Reszta Twojego pliku bez zmian)
 target_include_directories(898SimpleMidiPiano PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${FLUIDSYNTH_INCLUDE_DIRS}
@@ -92,7 +94,6 @@ target_include_directories(898SimpleMidiPiano PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/pugi"
 )
 
-target_link_directories(898SimpleMidiPiano PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/build")
 target_compile_options(898SimpleMidiPiano PRIVATE ${FLUIDSYNTH_CFLAGS_OTHER})
 
 target_link_libraries(898SimpleMidiPiano PRIVATE
@@ -114,7 +115,6 @@ elseif(UNIX)
     target_compile_definitions(898SimpleMidiPiano PRIVATE __LINUX_ALSA__)
 endif()
 
-# ... (reszta Twoich ustawień instalacji) ...
 if(${QT_VERSION} VERSION_LESS 6.1.0)
     set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.898SimpleMidiPiano)
 endif()

@@ -7,39 +7,21 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
-    - name: Pobranie kodu głównego projektu
+    - name: Pobranie kodu projektu
       uses: actions/checkout@v4
 
-    - name: Pobranie kodu Verovio
-      run: |
-        if (Test-Path verovio-develop) { 
-            Remove-Item -Recurse -Force verovio-develop 
-        }
-        git clone --depth 1 https://github.com/rism-digital/verovio.git verovio-develop
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Nie udało się pobrać biblioteki Verovio!"
-            exit $LASTEXITCODE
-        }
-
-    - name: Instalacja Qt
+    - name: Instalacja Qt 6
       uses: jurplel/install-qt-action@v3
       with:
-        version: '6.6.1'
+        version: '6.5.3'
         cached: 'true'
-        modules: 'qtmultimedia qtwebengine qtwebchannel qtpositioning'
-
-    - name: Kompilacja Verovio
-      run: |
-        pushd verovio-develop
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build --config Release --parallel 4
-        popd
+        modules: 'qtwebengine qtmultimedia qtwebchannel qtpositioning'
 
     - name: Konfiguracja CMake (Release)
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
 
     - name: Kompilacja projektu
       run: cmake --build build --config Release --parallel 4
