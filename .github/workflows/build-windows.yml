@@ -22,13 +22,15 @@ jobs:
 
     - name: Kompilacja Verovio
       run: |
-        cmake -S verovio-develop/cmake -B verovio-develop/build -DCMAKE_BUILD_TYPE=Release
-        cmake --build verovio-develop/build --config Release --parallel 4
+        cd verovio-develop/cmake
+        cmake -DBUILD_AS_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -B build
+        cmake --build build --config Release --parallel 4
 
     - name: Przygotowanie verovio.lib dla konsolidatora
       run: |
-        $lib = Get-ChildItem -Path "verovio-develop/build" -Recurse -Filter "verovio.lib" | Select-Object -First 1
+        $lib = Get-ChildItem -Path "verovio-develop/cmake/build" -Recurse -Filter "verovio.lib" | Select-Object -First 1
         if ($lib) {
+            New-Item -ItemType Directory -Force -Path "verovio-develop/build"
             Copy-Item $lib.FullName -Destination "verovio-develop/build/"
             Write-Host "Skopiowano pomyślnie: $($lib.FullName)"
         } else {
