@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(898SimpleMidiPiano VERSION 0.1 LANGUAGES CXX)
 
+# --- Ujednolicenie katalogów wyjściowych dla MSBuild (zapobiega błędom LNK1181) ---
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # --- Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
