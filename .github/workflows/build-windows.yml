@@ -25,8 +25,19 @@ jobs:
         cmake -S verovio-develop/cmake -B verovio-develop/build -DCMAKE_BUILD_TYPE=Release
         cmake --build verovio-develop/build --config Release --parallel 4
 
+    - name: Przygotowanie verovio.lib dla konsolidatora
+      run: |
+        $lib = Get-ChildItem -Path "verovio-develop/build" -Recurse -Filter "verovio.lib" | Select-Object -First 1
+        if ($lib) {
+            Copy-Item $lib.FullName -Destination "verovio-develop/build/"
+            Write-Host "Skopiowano pomyślnie: $($lib.FullName)"
+        } else {
+            Write-Error "Nie znaleziono pliku verovio.lib!"
+            exit 1
+        }
+
     - name: Konfiguracja CMake (Release)
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR" -DCMAKE_CXX_FLAGS="/D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING"
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
 
     - name: Kompilacja projektu
       run: cmake --build build --config Release --parallel 4
