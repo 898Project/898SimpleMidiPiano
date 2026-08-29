@@ -26,7 +26,7 @@ jobs:
         cmake --build verovio-develop/build --config Release --parallel 4
 
     - name: Konfiguracja CMake (Release)
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR" -DCMAKE_CXX_FLAGS="/D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING"
 
     - name: Kompilacja projektu
       run: cmake --build build --config Release --parallel 4
