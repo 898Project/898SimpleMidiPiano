@@ -2,11 +2,6 @@ cmake_minimum_required(VERSION 3.16)
 
 project(898SimpleMidiPiano VERSION 0.1 LANGUAGES CXX)
 
-# --- Ujednolicenie katalogów wyjściowych dla MSBuild (zapobiega błędom LNK1181) ---
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 # --- Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
@@ -97,6 +92,11 @@ target_include_directories(898SimpleMidiPiano PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei/dist"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/json"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/pugi"
+)
+
+# Wskazanie konsolidatorowi lokalizacji wygenerowanych plików Verovio dla Visual Studio (Release/Debug)
+target_link_directories(898SimpleMidiPiano PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}/verovio-develop/cmake/$<CONFIG>"
 )
 
 target_compile_options(898SimpleMidiPiano PRIVATE ${FLUIDSYNTH_CFLAGS_OTHER})
