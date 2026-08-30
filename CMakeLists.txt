@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(898SimpleMidiPiano VERSION 0.1 LANGUAGES CXX)
 
+# --- Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 
@@ -15,6 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
+# PkgConfig i FluidSynth są wymagane głównie na Linuksie/Unixie
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FLUIDSYNTH REQUIRED fluidsynth)
@@ -24,10 +26,26 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Wymuszenie budowania Verovio jako biblioteki STATYCZNEJ ---
+# --- Integracja Verovio oraz łatka na eksport s_defaultPath dla MSVC ---
 set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+if(WIN32)
+    set(RESOURCES_H_PATH "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include/vrv/resources.h")
+    if(EXISTS "${RESOURCES_H_PATH}")
+        file(READ "${RESOURCES_H_PATH}" RESOURCES_H_CONTENT)
+        string(REPLACE "static std::string s_defaultPath;" "public: VRV_API static std::string s_defaultPath;" RESOURCES_H_CONTENT_NEW "${RESOURCES_H_CONTENT}")
+        if(NOT RESOURCES_H_CONTENT STREQUAL RESOURCES_H_CONTENT_NEW)
+            file(WRITE "${RESOURCES_H_PATH}" "${RESOURCES_H_CONTENT_NEW}")
+            message(STATUS "Zastosowano łatkę eksportu s_defaultPath w verovio/resources.h")
+        endif()
+    endif()
+endif()
+
 add_subdirectory(verovio-develop/cmake)
+
+if(WIN32)
+    set_target_properties(verovio PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+endif()
 
 set(PROJECT_SOURCES
     main.cpp
@@ -53,15 +71,19 @@ else()
     endif()
 endif()
 
+# --- Optymalizacje tylko dla Release ---
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Konfiguracja optymalizacji dla Release...")
+
     if(NOT MSVC)
         target_compile_options(898SimpleMidiPiano PRIVATE -Os -ffunction-sections -fdata-sections)
         target_link_options(898SimpleMidiPiano PRIVATE -Wl,--gc-sections)
     endif()
+
     if(lto_supported)
         set_target_properties(898SimpleMidiPiano PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
     endif()
+
     if(UNIX AND NOT APPLE)
         add_custom_command(TARGET 898SimpleMidiPiano POST_BUILD
             COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:898SimpleMidiPiano>"
@@ -83,6 +105,11 @@ target_include_directories(898SimpleMidiPiano PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei/dist"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/json"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/pugi"
+)
+
+# Wskazanie konsolidatorowi lokalizacji wygenerowanych plików Verovio dla Visual Studio (Release/Debug)
+target_link_directories(898SimpleMidiPiano PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}/verovio-develop/cmake/$<CONFIG>"
 )
 
 target_compile_options(898SimpleMidiPiano PRIVATE ${FLUIDSYNTH_CFLAGS_OTHER})
