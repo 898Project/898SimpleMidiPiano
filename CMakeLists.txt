@@ -13,11 +13,6 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Wymuszenie eksportu symboli na Windowsie, aby MSVC wygenerował plik .lib dla biblioteki Verovio
-if(WIN32)
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
@@ -32,8 +27,9 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Integracja Verovio jako podprojektu CMake ---
+# --- Integracja Verovio jako statycznej biblioteki podprojektu ---
 set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(verovio-develop/cmake)
 
 set(PROJECT_SOURCES
@@ -97,11 +93,6 @@ target_include_directories(898SimpleMidiPiano PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei/dist"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/json"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/pugi"
-)
-
-# Wskazanie konsolidatorowi lokalizacji wygenerowanych plików Verovio dla Visual Studio (Release/Debug)
-target_link_directories(898SimpleMidiPiano PRIVATE
-    "${CMAKE_CURRENT_BINARY_DIR}/verovio-develop/cmake/$<CONFIG>"
 )
 
 target_compile_options(898SimpleMidiPiano PRIVATE ${FLUIDSYNTH_CFLAGS_OTHER})
