@@ -1,137 +1,44 @@
-cmake_minimum_required(VERSION 3.16)
+name: Build Windows
 
-project(898SimpleMidiPiano VERSION 0.1 LANGUAGES CXX)
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-# --- Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
-include(CheckIPOSupported)
-check_ipo_supported(RESULT lto_supported OUTPUT error)
+jobs:
+  build:
+    runs-on: windows-2022
 
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
+    steps:
+    - name: Pobranie kodu projektu
+      uses: actions/checkout@v4
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    - name: Instalacja Qt 6
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.3'
+        cached: 'true'
+        modules: 'qtwebengine qtmultimedia qtwebchannel qtpositioning'
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
+    - name: Konfiguracja CMake (Release)
+      run: cmake --fresh -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
 
-# PkgConfig i FluidSynth są wymagane głównie na Linuksie/Unixie
-if(UNIX AND NOT APPLE)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(FLUIDSYNTH REQUIRED fluidsynth)
-else()
-    set(FLUIDSYNTH_LIBRARIES "")
-    set(FLUIDSYNTH_INCLUDE_DIRS "")
-    set(FLUIDSYNTH_CFLAGS_OTHER "")
-endif()
+    - name: Kompilacja projektu
+      run: cmake --build build --config Release --parallel 4
 
-# --- Integracja Verovio jako biblioteki STATYCZNEJ ---
-# Statyczne linkowanie eliminuje problemy z eksportem prywatnych zmiennych statycznych w MSVC (LNK2001 / LNK1181)
-set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(verovio-develop/cmake)
+    - name: Deploy (windeployqt)
+      run: |
+        $windeployqt = Get-ChildItem -Path "$env:QT_PATH_VALUE" -Recurse -Filter "windeployqt.exe" | Select-Object -First 1
+        if ($windeployqt) {
+            Write-Host "Znaleziono: $($windeployqt.FullName)"
+            & $windeployqt.FullName --release --force build/Release/898SimpleMidiPiano.exe
+        } else {
+            Write-Error "Nie znaleziono windeployqt.exe!"
+            exit 1
+        }
 
-set(PROJECT_SOURCES
-    main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
-    RtMidi.h
-    RtMidi.cpp
-    MidiInput.h
-    MidiInput.cpp
-    resources.qrc
-    verovioscorewidget.h
-    verovioscorewidget.cpp
-)
-
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(898SimpleMidiPiano MANUAL_FINALIZATION ${PROJECT_SOURCES})
-else()
-    if(ANDROID)
-        add_library(898SimpleMidiPiano SHARED ${PROJECT_SOURCES})
-    else()
-        add_executable(898SimpleMidiPiano ${PROJECT_SOURCES})
-    endif()
-endif()
-
-# --- Optymalizacje tylko dla Release ---
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    message(STATUS "Konfiguracja optymalizacji dla Release...")
-
-    if(NOT MSVC)
-        target_compile_options(898SimpleMidiPiano PRIVATE -Os -ffunction-sections -fdata-sections)
-        target_link_options(898SimpleMidiPiano PRIVATE -Wl,--gc-sections)
-    endif()
-
-    if(lto_supported)
-        set_target_properties(898SimpleMidiPiano PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-    endif()
-
-    if(UNIX AND NOT APPLE)
-        add_custom_command(TARGET 898SimpleMidiPiano POST_BUILD
-            COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:898SimpleMidiPiano>"
-            COMMENT "Stripping binary for smaller size..."
-        )
-    endif()
-endif()
-
-target_include_directories(898SimpleMidiPiano PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${FLUIDSYNTH_INCLUDE_DIRS}
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include/tuning-library"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include/json"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include/vrv"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include/pugi"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei/addons"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei/dist"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/json"
-    "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/pugi"
-)
-
-target_compile_options(898SimpleMidiPiano PRIVATE ${FLUIDSYNTH_CFLAGS_OTHER})
-
-target_link_libraries(898SimpleMidiPiano PRIVATE
-    Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Multimedia
-    Qt${QT_VERSION_MAJOR}::WebEngineWidgets
-    ${FLUIDSYNTH_LIBRARIES}
-    verovio
-)
-
-if(WIN32)
-    target_link_libraries(898SimpleMidiPiano PRIVATE winmm)
-    target_compile_definitions(898SimpleMidiPiano PRIVATE __WINDOWS_MM__)
-elseif(APPLE)
-    target_link_libraries(898SimpleMidiPiano PRIVATE "-framework CoreMIDI" "-framework CoreAudio" "-framework CoreFoundation")
-    target_compile_definitions(898SimpleMidiPiano PRIVATE __MACOSX_CORE__)
-elseif(UNIX)
-    target_link_libraries(898SimpleMidiPiano PRIVATE asound pthread)
-    target_compile_definitions(898SimpleMidiPiano PRIVATE __LINUX_ALSA__)
-endif()
-
-if(${QT_VERSION} VERSION_LESS 6.1.0)
-    set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.898SimpleMidiPiano)
-endif()
-
-set_target_properties(898SimpleMidiPiano PROPERTIES
-    ${BUNDLE_ID_OPTION}
-    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
-)
-
-include(GNUInstallDirs)
-install(TARGETS 898SimpleMidiPiano
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(898SimpleMidiPiano)
-endif()
+    - name: Archiwizacja i przygotowanie paczki
+      uses: actions/upload-artifact@v4
+      with:
+        name: 898SimpleMidiPiano-Windows-Portable
+        path: build/Release/
