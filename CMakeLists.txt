@@ -13,6 +13,11 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Wymuszenie eksportu symboli na Windowsie, aby MSVC wygenerował plik .lib dla biblioteki Verovio
+if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
@@ -27,9 +32,8 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Integracja Verovio jako statycznej biblioteki podprojektu ---
+# --- Integracja Verovio jako podprojektu CMake ---
 set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # Wymuszenie biblioteki statycznej unika błędów LNK2001 na MSVC
 add_subdirectory(verovio-develop/cmake)
 
 set(PROJECT_SOURCES
