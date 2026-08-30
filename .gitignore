@@ -10,3 +10,4 @@ CMakeFiles/
 
 # Ignorujemy tylko folder budowania Verovio, pozwalając śledzić kod i nagłówki
 verovio-develop/build/
+CMakeLists.txt.user
