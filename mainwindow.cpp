@@ -12,11 +12,11 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-#if !defined(_WIN32)
+
     , settings(nullptr)
     , synth(nullptr)
     , adriver(nullptr)
-#endif
+
     , soundFontId(-1)
     , isPlayingMidi(false)
     , currentBpm(120)
@@ -30,7 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-#if !defined(_WIN32)
+
     // --- Inicjalizacja FluidSynth oraz SoundFonta z zasobów Qt ---
     settings = new_fluid_settings();
     fluid_settings_setint(settings, "synth.polyphony", 64);
@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
             }
         }
     }
-#endif
+
 
     // --- Główny układ okna ---
     QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
@@ -117,13 +117,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     metronomeTimer = new QTimer(this);
     connect(metronomeTimer, &QTimer::timeout, this, [this]() {
-#if !defined(_WIN32)
         if (!metronomeActive || !synth) return;
         int noteToPlay = (currentBeatInMeasure == 0) ? 76 : 77;
         fluid_synth_noteon(synth, 9, noteToPlay, 100);
-#else
-        if (!metronomeActive) return;
-#endif
         currentBeatInMeasure = (currentBeatInMeasure + 1) % timeBeats;
     });
 
@@ -149,11 +145,11 @@ MainWindow::~MainWindow()
 {
     if (playbackTimer) playbackTimer->stop();
     if (metronomeTimer) metronomeTimer->stop();
-#if !defined(_WIN32)
+
     if (adriver) delete_fluid_audio_driver(adriver);
     if (synth) delete_fluid_synth(synth);
     if (settings) delete_fluid_settings(settings);
-#endif
+
     delete ui;
 }
 
@@ -178,9 +174,9 @@ void MainWindow::onModeChanged(int index)
 }
 
 void MainWindow::handleNoteOn(int note, int velocity) {
-#if !defined(_WIN32)
+
     if (synth) fluid_synth_noteon(synth, 0, note, velocity);
-#endif
+
 
     if (currentMode == PracticeMode::WaitMode || currentMode == PracticeMode::RandomMode) {
         if (!currentlyPressedNotes.contains(note)) {
@@ -191,9 +187,9 @@ void MainWindow::handleNoteOn(int note, int velocity) {
 }
 
 void MainWindow::handleNoteOff(int note) {
-#if !defined(_WIN32)
+
     if (synth) fluid_synth_noteoff(synth, 0, note);
-#endif
+
 
     currentlyPressedNotes.removeAll(note);
 }
@@ -452,11 +448,11 @@ void MainWindow::autoPlayNextStep() {
     if (songSequence.isEmpty()) return;
 
     if (currentSequenceIndex >= songSequence.size()) {
-#if !defined(_WIN32)
+
         for (int note : activeAutoPlayNotes) {
             if (synth) fluid_synth_noteoff(synth, 0, note);
         }
-#endif
+
         activeAutoPlayNotes.clear();
         playbackTimer->stop();
         statusLabel->setText("Koniec odtwarzania.");
@@ -475,11 +471,11 @@ void MainWindow::autoPlayNextStep() {
         }
     }
 
-#if !defined(_WIN32)
+
     for (int note : notesToStop) {
         if (synth) fluid_synth_noteoff(synth, 0, note);
     }
-#endif
+
 
     QList<int> nextActiveNotes;
 
@@ -490,9 +486,9 @@ void MainWindow::autoPlayNextStep() {
     }
 
     for (int note : newExpectedNotes) {
-#if !defined(_WIN32)
+
         if (synth) fluid_synth_noteon(synth, 0, note, 100);
-#endif
+
         if (!nextActiveNotes.contains(note)) {
             nextActiveNotes.append(note);
         }

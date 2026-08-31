@@ -20,11 +20,15 @@ jobs:
         cached: 'true'
         modules: 'qtwebengine qtmultimedia qtwebchannel qtpositioning'
 
+    - name: Instalacja biblioteki FluidSynth przez vcpkg
+      run: vcpkg install fluidsynth:x64-windows
+
     - name: Inicjalizacja środowiska MSVC
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Konfiguracja CMake (Release)
-      run: cmake --fresh -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
+      # Wskazujemy CMake'owi, aby używał narzędzi z vcpkg
+      run: cmake --fresh -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
 
     - name: Kompilacja projektu
       run: cmake --build build --config Release --parallel 4
@@ -34,6 +38,10 @@ jobs:
         New-Item -ItemType Directory -Force -Path dist
         Copy-Item build/898SimpleMidiPiano.exe dist/
         Copy-Item build/verovio.dll dist/
+        
+        # Kopiowanie fluidsynth.dll oraz niezbędnych zależności skompilowanych przez vcpkg
+        Copy-Item "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin\*.dll" dist/
+        
         windeployqt --release --force dist/898SimpleMidiPiano.exe
 
     - name: Archiwizacja i przygotowanie paczki
