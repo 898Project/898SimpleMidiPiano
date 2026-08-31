@@ -15,14 +15,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
+# --- KONFIGURACJA FLUIDSYNTH ---
 if(WIN32)
-    # Używamy oficjalnej konfiguracji CMake dostarczanej przez paczkę vcpkg
-    find_package(FluidSynth CONFIG REQUIRED)
+    # Konfiguracja dla Windows (vcpkg) - kluczowa poprawka jest tutaj
+    find_package(fluidsynth CONFIG REQUIRED)
     set(FLUIDSYNTH_LIBRARIES FluidSynth::fluidsynth)
-    set(FLUIDSYNTH_INCLUDE_DIRS "") # Target FluidSynth::fluidsynth sam dba o include'y
+    set(FLUIDSYNTH_INCLUDE_DIRS "")
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 elseif(UNIX AND NOT APPLE)
-    # Standardowa ścieżka dla Linuxa
+    # Konfiguracja dla Linuxa (pkg-config)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FLUIDSYNTH REQUIRED fluidsynth)
 else()
