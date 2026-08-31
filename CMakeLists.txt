@@ -26,26 +26,11 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Integracja Verovio oraz łatka na eksport s_defaultPath dla MSVC ---
+# --- Integracja Verovio jako biblioteki STATYCZNEJ ---
+# Wymuszenie BUILD_SHARED_LIBS OFF zapobiega tworzeniu DLL i usuwa błąd LNK2001 w MSVC
 set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
-
-if(WIN32)
-    set(RESOURCES_H_PATH "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/include/vrv/resources.h")
-    if(EXISTS "${RESOURCES_H_PATH}")
-        file(READ "${RESOURCES_H_PATH}" RESOURCES_H_CONTENT)
-        string(REPLACE "static std::string s_defaultPath;" "public: VRV_API static std::string s_defaultPath;" RESOURCES_H_CONTENT_NEW "${RESOURCES_H_CONTENT}")
-        if(NOT RESOURCES_H_CONTENT STREQUAL RESOURCES_H_CONTENT_NEW)
-            file(WRITE "${RESOURCES_H_PATH}" "${RESOURCES_H_CONTENT_NEW}")
-            message(STATUS "Zastosowano łatkę eksportu s_defaultPath w verovio/resources.h")
-        endif()
-    endif()
-endif()
-
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(verovio-develop/cmake)
-
-if(WIN32)
-    set_target_properties(verovio PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-endif()
 
 set(PROJECT_SOURCES
     main.cpp
@@ -105,11 +90,6 @@ target_include_directories(898SimpleMidiPiano PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/libmei/dist"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/json"
     "${CMAKE_CURRENT_SOURCE_DIR}/verovio-develop/src/pugi"
-)
-
-# Wskazanie konsolidatorowi lokalizacji wygenerowanych plików Verovio dla Visual Studio (Release/Debug)
-target_link_directories(898SimpleMidiPiano PRIVATE
-    "${CMAKE_CURRENT_BINARY_DIR}/verovio-develop/cmake/$<CONFIG>"
 )
 
 target_compile_options(898SimpleMidiPiano PRIVATE ${FLUIDSYNTH_CFLAGS_OTHER})
