@@ -24,17 +24,10 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Wymuszenie budowania Verovio jako biblioteki ---
+# --- Wymuszenie budowania Verovio jako biblioteki i eksportu symboli na Windows ---
 set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON CACHE BOOL "" FORCE)
 add_subdirectory(verovio-develop/cmake)
-
-# Wymuszenie poprawnej lokalizacji wyjściowej biblioteki Verovio
-if(TARGET verovio)
-    set_target_properties(verovio PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/verovio_lib"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/verovio_lib"
-    )
-endif()
 
 set(PROJECT_SOURCES
     main.cpp
@@ -105,6 +98,14 @@ target_link_libraries(898SimpleMidiPiano PRIVATE
 if(WIN32)
     target_link_libraries(898SimpleMidiPiano PRIVATE winmm)
     target_compile_definitions(898SimpleMidiPiano PRIVATE __WINDOWS_MM__)
+
+    # Automatyczne kopiowanie pliku verovio.dll obok głównego pliku wykonywalnego
+    add_custom_command(TARGET 898SimpleMidiPiano POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:verovio>"
+            "$<TARGET_FILE_DIR:898SimpleMidiPiano>"
+        COMMENT "Kopiowanie verovio.dll do katalogu wyjściowego..."
+    )
 elseif(APPLE)
     target_link_libraries(898SimpleMidiPiano PRIVATE "-framework CoreMIDI" "-framework CoreAudio" "-framework CoreFoundation")
     target_compile_definitions(898SimpleMidiPiano PRIVATE __MACOSX_CORE__)
