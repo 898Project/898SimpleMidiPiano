@@ -4,13 +4,13 @@
 #include <clocale>
 
 #include "toolkit.h"
-#include "resources.h"
+//#include "resources.h"
 
 VerovioScoreWidget::VerovioScoreWidget(QWidget *parent)
     : QWebEngineView(parent)
 {
     std::string resourcePath = "/home/kamil/Dokumenty/Projekty/QT/898SimpleMidiPiano/verovio-develop/data";
-    vrv::Resources::SetDefaultPath(resourcePath);
+    //vrv::Resources::SetDefaultPath(resourcePath);
 
     m_toolkit = new vrv::Toolkit();
     m_toolkit->SetResourcePath(resourcePath);

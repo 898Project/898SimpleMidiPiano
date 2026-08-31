@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.16)
 
 project(898SimpleMidiPiano VERSION 0.1 LANGUAGES CXX)
 
-# --- Sprawdzenie wsparcia dla LTO (Link Time Optimization) ---
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 
@@ -16,7 +15,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
-# PkgConfig i FluidSynth są wymagane głównie na Linuksie/Unixie
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FLUIDSYNTH REQUIRED fluidsynth)
@@ -26,10 +24,6 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Integracja Verovio jako biblioteki STATYCZNEJ ---
-# Wymuszenie BUILD_SHARED_LIBS OFF zapobiega tworzeniu DLL i usuwa błąd LNK2001 w MSVC
-set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(verovio-develop/cmake)
 
 set(PROJECT_SOURCES
@@ -56,19 +50,15 @@ else()
     endif()
 endif()
 
-# --- Optymalizacje tylko dla Release ---
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Konfiguracja optymalizacji dla Release...")
-
     if(NOT MSVC)
         target_compile_options(898SimpleMidiPiano PRIVATE -Os -ffunction-sections -fdata-sections)
         target_link_options(898SimpleMidiPiano PRIVATE -Wl,--gc-sections)
     endif()
-
     if(lto_supported)
         set_target_properties(898SimpleMidiPiano PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
     endif()
-
     if(UNIX AND NOT APPLE)
         add_custom_command(TARGET 898SimpleMidiPiano POST_BUILD
             COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:898SimpleMidiPiano>"
