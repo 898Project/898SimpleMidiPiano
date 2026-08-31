@@ -24,9 +24,17 @@ else()
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 endif()
 
-# --- Wymuszenie budowania Verovio jako biblioteki, a nie pliku wykonywalnego ---
+# --- Wymuszenie budowania Verovio jako biblioteki ---
 set(BUILD_AS_LIBRARY ON CACHE BOOL "" FORCE)
 add_subdirectory(verovio-develop/cmake)
+
+# Wymuszenie poprawnej lokalizacji wyjściowej biblioteki Verovio
+if(TARGET verovio)
+    set_target_properties(verovio PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/verovio_lib"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/verovio_lib"
+    )
+endif()
 
 set(PROJECT_SOURCES
     main.cpp

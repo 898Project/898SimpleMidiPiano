@@ -20,8 +20,11 @@ jobs:
         cached: 'true'
         modules: 'qtwebengine qtmultimedia qtwebchannel qtpositioning'
 
+    - name: Inicjalizacja środowiska MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Konfiguracja CMake (Release)
-      run: cmake --fresh -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
+      run: cmake --fresh -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
 
     - name: Kompilacja projektu
       run: cmake --build build --config Release --parallel 4
@@ -31,7 +34,7 @@ jobs:
         $windeployqt = Get-ChildItem -Path "$env:QT_PATH_VALUE" -Recurse -Filter "windeployqt.exe" | Select-Object -First 1
         if ($windeployqt) {
             Write-Host "Znaleziono: $($windeployqt.FullName)"
-            & $windeployqt.FullName --release --force build/Release/898SimpleMidiPiano.exe
+            & $windeployqt.FullName --release --force build/898SimpleMidiPiano.exe
         } else {
             Write-Error "Nie znaleziono windeployqt.exe!"
             exit 1
@@ -41,4 +44,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: 898SimpleMidiPiano-Windows-Portable
-        path: build/Release/
+        path: build/898SimpleMidiPiano.exe
