@@ -18,8 +18,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEng
 # --- KONFIGURACJA FLUIDSYNTH ---
 if(WIN32)
     # Konfiguracja dla Windows (vcpkg) - kluczowa poprawka jest tutaj
-    find_package(fluidsynth CONFIG REQUIRED)
-    set(FLUIDSYNTH_LIBRARIES FluidSynth::fluidsynth)
+    find_package(FluidSynth CONFIG REQUIRED)
+    set(FLUIDSYNTH_LIBRARIES FluidSynth::libfluidsynth)
     set(FLUIDSYNTH_INCLUDE_DIRS "")
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 elseif(UNIX AND NOT APPLE)
