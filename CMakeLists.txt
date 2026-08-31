@@ -16,9 +16,10 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia WebEngineWi
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia WebEngineWidgets)
 
 if(WIN32)
-    # Na Windows szukamy biblioteki pobranej przez vcpkg
-    find_path(FLUIDSYNTH_INCLUDE_DIRS NAMES fluidsynth.h)
-    find_library(FLUIDSYNTH_LIBRARIES NAMES fluidsynth)
+    # Używamy oficjalnej konfiguracji CMake dostarczanej przez paczkę vcpkg
+    find_package(FluidSynth CONFIG REQUIRED)
+    set(FLUIDSYNTH_LIBRARIES FluidSynth::fluidsynth)
+    set(FLUIDSYNTH_INCLUDE_DIRS "") # Target FluidSynth::fluidsynth sam dba o include'y
     set(FLUIDSYNTH_CFLAGS_OTHER "")
 elseif(UNIX AND NOT APPLE)
     # Standardowa ścieżka dla Linuxa
