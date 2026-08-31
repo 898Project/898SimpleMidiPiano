@@ -17,7 +17,7 @@ jobs:
       uses: jurplel/install-qt-action@v3
       with:
         version: '6.5.3'
-        modules: 'qtwebengine qtmultimedia qtwebchannel'
+        modules: 'qtwebengine qtmultimedia qtwebchannel qtpositioning'
 
     - name: Instalacja biblioteki FluidSynth przez vcpkg
       run: vcpkg install fluidsynth:x64-windows
